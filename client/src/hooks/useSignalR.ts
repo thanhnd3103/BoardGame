@@ -30,7 +30,7 @@ export function useSignalR() {
     });
 
     conn.on('Error', (message: string) => {
-      console.error('Server error:', message);
+      useGameStore.getState().setServerError(message);
     });
 
     ensureConnected();

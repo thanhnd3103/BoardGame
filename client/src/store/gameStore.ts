@@ -12,6 +12,7 @@ interface GameState {
   selectedIndices: Set<number>;
   gameActive: boolean;
   autoPassedNames: string[];
+  serverError: string | null;
 
   setGameState: (state: {
     hand: Card[];
@@ -22,12 +23,14 @@ interface GameState {
     isGameOver: boolean;
   }) => void;
   setAutoPassNotification: (names: string[]) => void;
+  setServerError: (message: string | null) => void;
   toggleCardSelection: (index: number) => void;
   clearSelection: () => void;
   clear: () => void;
 }
 
 let autoPassTimeout: ReturnType<typeof setTimeout> | null = null;
+let serverErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const useGameStore = create<GameState>((set) => ({
   hand: [],
@@ -39,6 +42,7 @@ export const useGameStore = create<GameState>((set) => ({
   selectedIndices: new Set(),
   gameActive: false,
   autoPassedNames: [],
+  serverError: null,
 
   setGameState: (state) =>
     set({
@@ -50,6 +54,7 @@ export const useGameStore = create<GameState>((set) => ({
       isGameOver: state.isGameOver,
       gameActive: true,
       selectedIndices: new Set(),
+      serverError: null,
     }),
 
   setAutoPassNotification: (names) => {
@@ -59,6 +64,17 @@ export const useGameStore = create<GameState>((set) => ({
       set({ autoPassedNames: [] });
       autoPassTimeout = null;
     }, 200000);
+  },
+
+  setServerError: (message) => {
+    if (serverErrorTimeout) clearTimeout(serverErrorTimeout);
+    set({ serverError: message });
+    if (message !== null) {
+      serverErrorTimeout = setTimeout(() => {
+        set({ serverError: null });
+        serverErrorTimeout = null;
+      }, 5000);
+    }
   },
 
   toggleCardSelection: (index) =>
@@ -73,6 +89,7 @@ export const useGameStore = create<GameState>((set) => ({
 
   clear: () => {
     if (autoPassTimeout) { clearTimeout(autoPassTimeout); autoPassTimeout = null; }
+    if (serverErrorTimeout) { clearTimeout(serverErrorTimeout); serverErrorTimeout = null; }
     set({
       hand: [],
       playArea: [],
@@ -83,6 +100,7 @@ export const useGameStore = create<GameState>((set) => ({
       selectedIndices: new Set(),
       gameActive: false,
       autoPassedNames: [],
+      serverError: null,
     });
   },
 }));

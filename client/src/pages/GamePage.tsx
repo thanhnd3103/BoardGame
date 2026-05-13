@@ -17,7 +17,7 @@ export function GamePage() {
   const hostPlayerId = useRoomStore((s) => s.hostPlayerId);
   const {
     hand, playArea, currentTurnPlayerId, players,
-    finishOrder, isGameOver, selectedIndices, autoPassedNames,
+    finishOrder, isGameOver, selectedIndices, autoPassedNames, serverError,
     toggleCardSelection, clearSelection,
   } = useGameStore();
   const [error, setError] = useState('');
@@ -146,6 +146,11 @@ export function GamePage() {
         </div>
       )}
 
+      {serverError && (
+        <div className="bg-red-900/30 border border-red-500/40 rounded-lg px-4 py-2 text-center text-red-300 text-sm mb-2">
+          {serverError}
+        </div>
+      )}
       {error && <p className="text-red-400 text-sm text-center mb-2">{error}</p>}
 
       {!hasFinished && !isGameOver && (
