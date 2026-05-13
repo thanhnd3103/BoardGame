@@ -11,3 +11,4 @@ public sealed record PlayerFinishedEvent(PlayerId PlayerId, int Place) : GameEve
 public sealed record GameOverEvent(IReadOnlyList<(PlayerId PlayerId, int Place)> Rankings) : GameEvent;
 public sealed record InstantWinEvent(PlayerId PlayerId, IReadOnlyList<Card> Hand) : GameEvent;
 public sealed record NewTrickEvent(PlayerId LeadPlayerId) : GameEvent;
+public sealed record PlayerAutoPassedEvent(PlayerId PlayerId, string DisplayName) : GameEvent;

@@ -17,7 +17,7 @@ export function GamePage() {
   const hostPlayerId = useRoomStore((s) => s.hostPlayerId);
   const {
     hand, playArea, currentTurnPlayerId, players,
-    finishOrder, isGameOver, selectedIndices,
+    finishOrder, isGameOver, selectedIndices, autoPassedNames,
     toggleCardSelection, clearSelection,
   } = useGameStore();
   const [error, setError] = useState('');
@@ -137,6 +137,12 @@ export function GamePage() {
               Back to Lobby
             </button>
           </div>
+        </div>
+      )}
+
+      {autoPassedNames.length > 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-2 text-center text-yellow-300 text-sm mb-2">
+          {autoPassedNames.join(', ')} {autoPassedNames.length === 1 ? 'was' : 'were'} auto-passed — no valid moves
         </div>
       )}
 

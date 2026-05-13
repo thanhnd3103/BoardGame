@@ -20,6 +20,148 @@ public static class CombinationValidator
         };
     }
 
+    public static bool HasValidMove(IReadOnlyList<Card> hand, CardCombination current)
+    {
+        // Two-beater special rules: quads or long pair-sequences beat a Two
+        if (current.HighestRank == Rank.Two)
+        {
+            switch (current.Type)
+            {
+                case CombinationType.Single:
+                    if (hand.GroupBy(c => c.Rank).Any(g => g.Count() >= 4)) return true;
+                    if (HasPairSequenceOfAtLeast(hand, 3)) return true;
+                    break;
+                case CombinationType.Pair:
+                    if (HasPairSequenceOfAtLeast(hand, 4)) return true;
+                    break;
+                case CombinationType.Triple:
+                    if (HasPairSequenceOfAtLeast(hand, 5)) return true;
+                    break;
+            }
+        }
+
+        return current.Type switch
+        {
+            CombinationType.Single => AnyBeatingSingle(hand, current),
+            CombinationType.Pair => AnyBeatingPair(hand, current),
+            CombinationType.Triple => AnyBeatingTriple(hand, current),
+            CombinationType.Quad => AnyBeatingQuad(hand, current),
+            CombinationType.Sequence => AnyBeatingSequence(hand, current),
+            CombinationType.PairSequence => AnyBeatingPairSequence(hand, current),
+            _ => false
+        };
+    }
+
+    private static bool AnyBeatingSingle(IReadOnlyList<Card> hand, CardCombination current) =>
+        hand.Any(c => CanBeat(current, new CardCombination(CombinationType.Single, [c])));
+
+    private static bool AnyBeatingPair(IReadOnlyList<Card> hand, CardCombination current)
+    {
+        foreach (var group in hand.GroupBy(c => c.Rank).Where(g => g.Count() >= 2))
+        {
+            var best = group.OrderByDescending(c => c.Suit).Take(2).ToList();
+            if (CanBeat(current, new CardCombination(CombinationType.Pair, best))) return true;
+        }
+        return false;
+    }
+
+    private static bool AnyBeatingTriple(IReadOnlyList<Card> hand, CardCombination current)
+    {
+        foreach (var group in hand.GroupBy(c => c.Rank).Where(g => g.Count() >= 3))
+        {
+            var cards = group.OrderBy(c => c).Take(3).ToList();
+            if (CanBeat(current, new CardCombination(CombinationType.Triple, cards))) return true;
+        }
+        return false;
+    }
+
+    private static bool AnyBeatingQuad(IReadOnlyList<Card> hand, CardCombination current)
+    {
+        foreach (var group in hand.GroupBy(c => c.Rank).Where(g => g.Count() >= 4))
+        {
+            var cards = group.OrderBy(c => c).Take(4).ToList();
+            if (CanBeat(current, new CardCombination(CombinationType.Quad, cards))) return true;
+        }
+        return false;
+    }
+
+    private static bool AnyBeatingSequence(IReadOnlyList<Card> hand, CardCombination current)
+    {
+        var length = current.Cards.Count;
+        // Best card per rank (highest suit), excluding 2s
+        var byRank = hand
+            .Where(c => c.Rank != Rank.Two)
+            .GroupBy(c => c.Rank)
+            .ToDictionary(g => g.Key, g => g.Max()!);
+
+        var sortedRanks = byRank.Keys.OrderBy(r => r).ToList();
+
+        for (var i = 0; i <= sortedRanks.Count - length; i++)
+        {
+            var window = sortedRanks.Skip(i).Take(length).ToList();
+            if (!AreConsecutive(window)) continue;
+            var cards = window.Select(r => byRank[r]).OrderBy(c => c).ToList();
+            if (CanBeat(current, new CardCombination(CombinationType.Sequence, cards))) return true;
+        }
+        return false;
+    }
+
+    private static bool AnyBeatingPairSequence(IReadOnlyList<Card> hand, CardCombination current)
+    {
+        var pairCount = current.PairCount;
+        // Best 2 cards (highest suits) per rank, excluding 2s
+        var byRank = hand
+            .Where(c => c.Rank != Rank.Two)
+            .GroupBy(c => c.Rank)
+            .Where(g => g.Count() >= 2)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.Suit).Take(2).ToList());
+
+        var ranksWithPairs = byRank.Keys.OrderBy(r => r).ToList();
+
+        for (var i = 0; i <= ranksWithPairs.Count - pairCount; i++)
+        {
+            var window = ranksWithPairs.Skip(i).Take(pairCount).ToList();
+            if (!AreConsecutive(window)) continue;
+            var cards = window.SelectMany(r => byRank[r]).OrderBy(c => c).ToList();
+            if (CanBeat(current, new CardCombination(CombinationType.PairSequence, cards))) return true;
+        }
+        return false;
+    }
+
+    private static bool HasPairSequenceOfAtLeast(IReadOnlyList<Card> hand, int minPairs)
+    {
+        var ranksWithPairs = hand
+            .Where(c => c.Rank != Rank.Two)
+            .GroupBy(c => c.Rank)
+            .Where(g => g.Count() >= 2)
+            .Select(g => g.Key)
+            .OrderBy(r => r)
+            .ToList();
+
+        if (ranksWithPairs.Count < minPairs) return false;
+
+        var streak = 1;
+        for (var i = 1; i < ranksWithPairs.Count; i++)
+        {
+            if (ranksWithPairs[i] - ranksWithPairs[i - 1] == 1)
+            {
+                if (++streak >= minPairs) return true;
+            }
+            else
+            {
+                streak = 1;
+            }
+        }
+        return streak >= minPairs;
+    }
+
+    private static bool AreConsecutive(List<Rank> ranks)
+    {
+        for (var i = 1; i < ranks.Count; i++)
+            if (ranks[i] - ranks[i - 1] != 1) return false;
+        return true;
+    }
+
     public static bool CanBeat(CardCombination current, CardCombination proposed)
     {
         if (IsTwoBeater(current, proposed))

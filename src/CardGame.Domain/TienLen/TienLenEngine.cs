@@ -176,27 +176,7 @@ public sealed class TienLenEngine : IGameEngine
             return MoveResult.Success(newState, events);
         }
 
-        var activePlayers = newState.ActivePlayers;
-        var activeNotPassed = activePlayers.Where(p => !newState.PassedPlayers.Contains(p) && p != playerId).ToList();
-
-        if (activeNotPassed.Count == 0 && hand.Count > 0)
-        {
-            newState.StartNewTrick(playerId);
-            events.Add(new NewTrickEvent(playerId));
-        }
-        else if (activeNotPassed.Count == 0 && hand.Count == 0)
-        {
-            var nextLeader = FindNextActivePlayer(newState, playerId);
-            if (nextLeader.HasValue)
-            {
-                newState.StartNewTrick(nextLeader.Value);
-                events.Add(new NewTrickEvent(nextLeader.Value));
-            }
-        }
-        else
-        {
-            newState.AdvanceToNextActivePlayer();
-        }
+        AdvanceOrStartNewTrick(newState, playerId, events);
 
         return MoveResult.Success(newState, events);
     }
@@ -212,44 +192,67 @@ public sealed class TienLenEngine : IGameEngine
         newState.PassedPlayers.Add(playerId);
         events.Add(new PlayerPassedEvent(playerId));
 
-        var activePlayers = newState.ActivePlayers;
-        var activeNotPassed = activePlayers
-            .Where(p => !newState.PassedPlayers.Contains(p))
-            .ToList();
+        AdvanceOrStartNewTrick(newState, playerId, events);
 
-        if (activeNotPassed.Count == 1 && activeNotPassed[0] == newState.CurrentTrickLeader)
+        return MoveResult.Success(newState, events);
+    }
+
+    private static void AdvanceOrStartNewTrick(TienLenState state, PlayerId justMovedId, List<GameEvent> events)
+    {
+        var activePlayers = state.ActivePlayers;
+        var trickLeader = state.CurrentTrickLeader;
+        var startIndex = state.TurnOrder.IndexOf(justMovedId);
+
+        PlayerId? nextValidPlayer = null;
+
+        for (var i = 1; i < state.TurnOrder.Count; i++)
         {
-            // Hưởng soái
-            var leader = newState.CurrentTrickLeader!.Value;
-            events.Add(new TrickWonEvent(leader));
-            newState.StartNewTrick(leader);
-            events.Add(new NewTrickEvent(leader));
+            var idx = (startIndex + i) % state.TurnOrder.Count;
+            var pid = state.TurnOrder[idx];
+
+            if (!activePlayers.Contains(pid)) continue;
+            if (state.PassedPlayers.Contains(pid)) continue;
+
+            // The trick leader has already led this trick; skip them when looking
+            // for a responder — they get the trick if everyone else passes.
+            if (pid == trickLeader && state.CurrentTrickCombination is not null) continue;
+
+            var hand = state.PlayerHands[pid];
+            if (state.CurrentTrickCombination is null ||
+                CombinationValidator.HasValidMove(hand, state.CurrentTrickCombination))
+            {
+                nextValidPlayer = pid;
+                break;
+            }
+
+            // No valid move — auto-pass this player
+            state.PassedPlayers.Add(pid);
+            events.Add(new PlayerAutoPassedEvent(pid, state.PlayerNames.GetValueOrDefault(pid, "Unknown")));
         }
-        else if (activeNotPassed.Count == 0)
+
+        if (nextValidPlayer.HasValue)
         {
-            var leader = newState.CurrentTrickLeader!.Value;
-            if (activePlayers.Contains(leader))
-            {
-                events.Add(new TrickWonEvent(leader));
-                newState.StartNewTrick(leader);
-                events.Add(new NewTrickEvent(leader));
-            }
-            else
-            {
-                var nextPlayer = FindNextActivePlayer(newState, leader);
-                if (nextPlayer.HasValue)
-                {
-                    newState.StartNewTrick(nextPlayer.Value);
-                    events.Add(new NewTrickEvent(nextPlayer.Value));
-                }
-            }
+            state.CurrentPlayerIndex = state.TurnOrder.IndexOf(nextValidPlayer.Value);
+            return;
+        }
+
+        // Everyone else was passed or auto-passed — award trick to the leader
+        PlayerId? winner;
+        if (trickLeader.HasValue && activePlayers.Contains(trickLeader.Value))
+        {
+            winner = trickLeader;
         }
         else
         {
-            newState.AdvanceToNextActivePlayer();
+            winner = FindNextActivePlayer(state, justMovedId);
         }
 
-        return MoveResult.Success(newState, events);
+        if (winner.HasValue)
+        {
+            events.Add(new TrickWonEvent(winner.Value));
+            state.StartNewTrick(winner.Value);
+            events.Add(new NewTrickEvent(winner.Value));
+        }
     }
 
     private static void FinalizeGame(TienLenState state, List<GameEvent> events)

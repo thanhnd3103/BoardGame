@@ -9,6 +9,7 @@ using CardGame.Application.Rooms.JoinRoom;
 using CardGame.Application.Rooms.LeaveRoom;
 using CardGame.Application.Rooms.StartGame;
 using CardGame.Domain.GameEngine;
+using CardGame.Domain.TienLen;
 using CardGame.Infrastructure.Services;
 using Microsoft.AspNetCore.SignalR;
 
@@ -113,6 +114,13 @@ public sealed class GameHub(
             var engine = engineFactory.Create(room.GameType);
             var gameState = room.ActiveGameState ?? result.NewState!;
 
+            var autoPassedNames = result.Events
+                .OfType<PlayerAutoPassedEvent>()
+                .Select(e => e.DisplayName)
+                .ToList();
+            if (autoPassedNames.Count > 0)
+                await Clients.Group(roomCode).AutoPassed(autoPassedNames);
+
             await BroadcastGameState(room, engine, gameState);
 
             foreach (var evt in result.Events)
@@ -156,6 +164,13 @@ public sealed class GameHub(
 
             var engine = engineFactory.Create(room.GameType);
             var gameState = room.ActiveGameState ?? result.NewState!;
+
+            var autoPassedNames = result.Events
+                .OfType<PlayerAutoPassedEvent>()
+                .Select(e => e.DisplayName)
+                .ToList();
+            if (autoPassedNames.Count > 0)
+                await Clients.Group(roomCode).AutoPassed(autoPassedNames);
 
             await BroadcastGameState(room, engine, gameState);
 

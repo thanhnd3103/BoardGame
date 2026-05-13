@@ -25,6 +25,10 @@ export function useSignalR() {
       // GameOver is also reflected via GameStarted/GameStateUpdated with isGameOver=true
     });
 
+    conn.on('AutoPassed', (playerNames: string[]) => {
+      useGameStore.getState().setAutoPassNotification(playerNames);
+    });
+
     conn.on('Error', (message: string) => {
       console.error('Server error:', message);
     });
@@ -36,6 +40,7 @@ export function useSignalR() {
       conn.off('GameStarted');
       conn.off('GameStateUpdated');
       conn.off('GameOver');
+      conn.off('AutoPassed');
       conn.off('Error');
     };
   }, []);

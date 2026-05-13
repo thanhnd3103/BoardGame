@@ -50,7 +50,7 @@ export function LobbyPage() {
     if (roomCode) {
       navigator.clipboard.writeText(roomCode);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 200000);
     }
   }
 

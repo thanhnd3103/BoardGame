@@ -10,5 +10,6 @@ public interface IGameHubClient
     Task GameStateUpdated(GameStateDto state);
     Task PlayerFinished(string playerId, int place);
     Task GameOver(IReadOnlyList<FinishEntryDto> rankings);
+    Task AutoPassed(IReadOnlyList<string> playerNames);
     Task Error(string message);
 }

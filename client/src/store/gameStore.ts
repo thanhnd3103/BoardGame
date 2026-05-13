@@ -11,6 +11,7 @@ interface GameState {
   isGameOver: boolean;
   selectedIndices: Set<number>;
   gameActive: boolean;
+  autoPassedNames: string[];
 
   setGameState: (state: {
     hand: Card[];
@@ -20,10 +21,13 @@ interface GameState {
     finishOrder: FinishEntry[];
     isGameOver: boolean;
   }) => void;
+  setAutoPassNotification: (names: string[]) => void;
   toggleCardSelection: (index: number) => void;
   clearSelection: () => void;
   clear: () => void;
 }
+
+let autoPassTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const useGameStore = create<GameState>((set) => ({
   hand: [],
@@ -34,6 +38,7 @@ export const useGameStore = create<GameState>((set) => ({
   isGameOver: false,
   selectedIndices: new Set(),
   gameActive: false,
+  autoPassedNames: [],
 
   setGameState: (state) =>
     set({
@@ -47,6 +52,15 @@ export const useGameStore = create<GameState>((set) => ({
       selectedIndices: new Set(),
     }),
 
+  setAutoPassNotification: (names) => {
+    if (autoPassTimeout) clearTimeout(autoPassTimeout);
+    set({ autoPassedNames: names });
+    autoPassTimeout = setTimeout(() => {
+      set({ autoPassedNames: [] });
+      autoPassTimeout = null;
+    }, 200000);
+  },
+
   toggleCardSelection: (index) =>
     set((prev) => {
       const next = new Set(prev.selectedIndices);
@@ -57,7 +71,8 @@ export const useGameStore = create<GameState>((set) => ({
 
   clearSelection: () => set({ selectedIndices: new Set() }),
 
-  clear: () =>
+  clear: () => {
+    if (autoPassTimeout) { clearTimeout(autoPassTimeout); autoPassTimeout = null; }
     set({
       hand: [],
       playArea: [],
@@ -67,5 +82,7 @@ export const useGameStore = create<GameState>((set) => ({
       isGameOver: false,
       selectedIndices: new Set(),
       gameActive: false,
-    }),
+      autoPassedNames: [],
+    });
+  },
 }));
