@@ -5,7 +5,8 @@ obj/
 *.suo
 *.cache
 *.vs/
-.vscode/
+.vscode/settings.json
+.vscode/*.code-workspace
 
 ## Node
 client/node_modules/

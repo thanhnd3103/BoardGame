@@ -1,0 +1,61 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: CardGame.Api",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "backend: build",
+      "program": "${workspaceFolder}/src/CardGame.Api/bin/Debug/net9.0/CardGame.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/CardGame.Api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5000",
+        "TEMP": "${workspaceFolder}\\.vscode\\.tmp",
+        "TMP": "${workspaceFolder}\\.vscode\\.tmp"
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(http://\\S+)"
+      }
+    },
+    {
+      "name": "Frontend: Vite Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "client: dev",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/client",
+      "sourceMaps": true
+    },
+    {
+      "name": "Frontend: Vite Edge",
+      "type": "msedge",
+      "request": "launch",
+      "preLaunchTask": "client: dev",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/client",
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack: API + Chrome",
+      "configurations": [
+        "Backend: CardGame.Api",
+        "Frontend: Vite Chrome"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack: API + Edge",
+      "configurations": [
+        "Backend: CardGame.Api",
+        "Frontend: Vite Edge"
+      ],
+      "stopAll": true
+    }
+  ]
+}
